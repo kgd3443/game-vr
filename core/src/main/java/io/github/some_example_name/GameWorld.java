@@ -1,5 +1,7 @@
 package io.github.some_example_name;
 
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.MathUtils;
@@ -31,6 +33,10 @@ public class GameWorld {
     public GameCharacter player;
     private final Array<CoinObject> objects = new Array<>();
 
+    // ===== 코인 팝/이펙트 & 사운드 =====
+    private final Array<CoinPopEffect> coinEffects = new Array<>();
+    private Sound coinSfx; // 코인 획득/팝 사운드
+
     // ===== 코인 블록(오브젝트 레이어) =====
     private static class CoinBlock {
         Rectangle bounds;   // TMX 오브젝트의 위치/크기
@@ -41,7 +47,7 @@ public class GameWorld {
 
     // ===== 리소스 =====
     private final Texture playerTexture;
-    private final Texture objectTexture;
+    private final Texture objectTexture; // 코인 텍스처로 재사용(coin.png가 있다면 교체 권장)
 
     // (초기 코드 호환용) 월드 폭
     private final float worldWidth;
@@ -98,6 +104,14 @@ public class GameWorld {
         // --- 코인 블록 로드 (오브젝트 레이어: "CoinBlocks" 또는 "Bricks") ---
         loadCoinBlocksFromLayer("CoinBlocks");
         if (coinBlocks.size == 0) loadCoinBlocksFromLayer("Bricks");
+
+        // --- 사운드 로드 ---
+        // assets/coin.wav 가 존재해야 합니다. (원하시면 파일명 변경 가능)
+        try {
+            coinSfx = Gdx.audio.newSound(Gdx.files.internal("coin.wav"));
+        } catch (Exception e) {
+            coinSfx = null; // 사운드가 없어도 게임은 진행
+        }
     }
 
     private void loadCoinBlocksFromLayer(String layerName) {
@@ -164,10 +178,14 @@ public class GameWorld {
                     newY = r.y - playerH;
                     player.velocity.y = 0f;
 
-                    // 코인 획득 & 블록 비활성화(1회성)
+                    // 코인 팝 이펙트 + 사운드 + 점수
+                    float blockCenterX = r.x + r.width / 2f;
+                    float blockTopY    = r.y + r.height;
+                    coinEffects.add(new CoinPopEffect(objectTexture, blockCenterX, blockTopY));
+                    playCoinSfx();
+
                     onCoinCollected(1);
                     b.active = false;
-                    // 필요하면 배열에서 제거: coinBlocks.removeIndex(i--);
                     break; // 한 프레임에 한 개만 처리
                 }
             }
@@ -182,6 +200,7 @@ public class GameWorld {
             CoinObject obj = objects.get(i);
             if (player.sprite.getBoundingRectangle().overlaps(obj.bounds)) {
                 onCoinCollected(1);
+                playCoinSfx();
                 objects.removeIndex(i);
             }
         }
@@ -195,6 +214,21 @@ public class GameWorld {
 
         // (11) 점프 컷(키 뗐을 때 상승속도 줄이기)
         player.postCollisionUpdate();
+
+        // (12) 코인 팝 이펙트 업데이트/정리
+        for (int i = coinEffects.size - 1; i >= 0; i--) {
+            CoinPopEffect fx = coinEffects.get(i);
+            fx.update(delta);
+            if (!fx.alive) coinEffects.removeIndex(i);
+        }
+    }
+
+    private void playCoinSfx() {
+        if (coinSfx != null) {
+            try {
+                coinSfx.play(0.8f);
+            } catch (Exception ignored) { /* 플랫폼별 사운드 장치 이슈 무시 */ }
+        }
     }
 
     // ===== 코인 스폰(기존 낙하 코인) =====
@@ -238,21 +272,22 @@ public class GameWorld {
     // ===== Getter =====
     public int getMapWidthPx()  { return mapWidthPx; }
     public int getMapHeightPx() { return mapHeightPx; }
-
-    // ===== 렌더/조회 =====
-    public void draw(SpriteBatch batch) {
-        player.draw(batch);
-        for (CoinObject obj : objects) obj.draw(batch);
-        // 코인 블록은 오브젝트 레이어라 별도 렌더 없음(타일 레이어로 시각은 이미 표현됨)
-    }
     public GameCharacter getPlayer() { return player; }
     public Array<CoinObject> getObjects() { return objects; }
     public int getScore() { return score; }
     public int getStage() { return stage; }
 
+    // ===== 렌더/조회 =====
+    public void draw(SpriteBatch batch) {
+        player.draw(batch);
+        for (CoinObject obj : objects) obj.draw(batch);
+        for (CoinPopEffect fx : coinEffects) fx.draw(batch);
+    }
+
     // ===== 리소스 해제 =====
     public void dispose() {
         if (mapRenderer != null) mapRenderer.dispose();
         if (tiledMap != null)    tiledMap.dispose();
+        if (coinSfx != null)     coinSfx.dispose();
     }
 }

@@ -33,6 +33,10 @@ public class GameCharacter {
     private float jumpBuffer  = 0f;     // 남은 버퍼 시간
     private boolean jumpCutQueued = false; // 점프키 떼짐 예약
 
+    // 이중 점프
+    private int maxJumps = 2;     // 총 점프 가능 횟수(지상 기준)
+    private int jumpsLeft = 2;    // 남은 점프 횟수
+
     // 입력 상태
     private float moveAxis = 0f; // -1..+1
 
@@ -91,24 +95,28 @@ public class GameCharacter {
     public void setGrounded(boolean grounded) {
         if (grounded && !this.isGrounded) {
             coyoteTimer = COYOTE_TIME; // 새 착지 시 타이머 리필
+            jumpsLeft = maxJumps;       // 착지 시 점프 횟수 리셋
         }
         this.isGrounded = grounded;
     }
 
-    // 월드가 호출: 착지/코요테/버퍼 조건을 만족하면 점프 실행
+    // 월드가 호출: 버퍼+남은 점프를 확인해 점프 실행
     public boolean tryConsumeJump() {
-        boolean canJump = isGrounded || coyoteTimer > 0f;
-        if (canJump && jumpBuffer > 0f) {
+        // 남은 점프가 있어야 하며, 버퍼 안에 입력이 들어왔을 때 점프 실행
+        // 코요테가 남아있으면 '첫 점프'를 지상 판정처럼 허용
+        boolean canJumpNow = (jumpsLeft > 0) && (jumpBuffer > 0f) && (isGrounded || coyoteTimer > 0f || !isGrounded);
+        if (canJumpNow) {
             velocity.y = jumpVelocity;
             isGrounded = false;
             coyoteTimer = 0f;
             jumpBuffer = 0f;
+            jumpsLeft--;         // 점프 1회 소모
             return true;
         }
         return false;
     }
 
-    // 월드가 충돌 처리 후 호출: 점프 컷 적용(상승 중이고 컷 예약되었을 때)
+    // 충돌 처리 후: 점프 컷(상승 중이고 컷 예약되었을 때)
     public void postCollisionUpdate() {
         if (jumpCutQueued && velocity.y > 0f) {
             velocity.y *= jumpCutFactor;

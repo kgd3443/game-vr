@@ -42,7 +42,7 @@ public class Main extends ApplicationAdapter {
         batch = new SpriteBatch();
         effectSound   = Gdx.audio.newSound(Gdx.files.internal("drop.mp3"));
         playerTexture = new Texture("t.png");
-        objectTexture = new Texture("coin.jpg");
+        objectTexture = new Texture("coin.png");
         pauseTexture  = new Texture("pause.png");
 
         // 픽셀아트 선명도(선택 권장)
