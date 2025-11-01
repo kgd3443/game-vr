@@ -4,6 +4,9 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.utils.Array;
+import com.badlogic.gdx.maps.tiled.TiledMapTileSet;
+import com.badlogic.gdx.maps.tiled.TiledMapTile;
+
 
 // Tiled map
 import com.badlogic.gdx.graphics.OrthographicCamera;
@@ -53,7 +56,8 @@ public class GameWorld {
         this.worldWidth = worldWidth;
 
         // --- Tiled 맵 로드 및 크기 계산 ---
-        this.tiledMap = new TmxMapLoader().load("level1.tmx");
+        // assets/maps/level1.tmx 기준
+        this.tiledMap = new TmxMapLoader().load("maps/level1.tmx");
         this.mapRenderer = new OrthogonalTiledMapRenderer(tiledMap, unitScale);
 
         int mapWidthTiles  = (Integer) tiledMap.getProperties().get("width");
@@ -63,9 +67,24 @@ public class GameWorld {
         this.mapWidthPx  = mapWidthTiles * tileWidth;
         this.mapHeightPx = mapHeightTiles * tileHeight;
 
+        for (TiledMapTileSet set : tiledMap.getTileSets()) {
+            // 같은 타일셋의 텍스처는 보통 하나이므로, 첫 타일만 처리하고 break
+            for (TiledMapTile tile : set) {
+                if (tile != null && tile.getTextureRegion() != null) {
+                    tile.getTextureRegion().getTexture()
+                        .setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
+                    break;
+                }
+            }
+        }
+
         // --- 플레이어 초기화 ---
-        this.player = new GameCharacter(playerTexture, 100, FLOOR_LEVEL);
+        this.player = new GameCharacter(playerTex, 100, FLOOR_LEVEL);
         this.player.setGrounded(true);
+
+        // 플레이어 스프라이트를 타일 기준 크기로 축소 (1x2 타일: 16x32)
+        this.player.sprite.setSize(16f, 32f);
+        this.player.syncSpriteToPosition();
     }
 
     // ===== 메인 업데이트 =====

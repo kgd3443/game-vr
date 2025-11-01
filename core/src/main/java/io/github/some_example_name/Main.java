@@ -15,8 +15,9 @@ import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 
 public class Main extends ApplicationAdapter {
-    private static final float WORLD_WIDTH  = 1280f;
-    private static final float WORLD_HEIGHT = 720f;
+    // TMX(16x16, 13타일 높이=208px)에 맞춘 월드 해상도
+    private static final float VIEW_W  = 320f; // 가로 20타일
+    private static final float VIEW_H  = 208f; // 세로 13타일(맵 높이와 동일)
 
     private GameState currentState = GameState.RUNNING;
 
@@ -44,18 +45,22 @@ public class Main extends ApplicationAdapter {
         objectTexture = new Texture("coin.jpg");
         pauseTexture  = new Texture("pause.png");
 
-        // 카메라/뷰포트 준비
+        // 픽셀아트 선명도(선택 권장)
+        playerTexture.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
+        objectTexture.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
+
+        // 카메라/뷰포트: TMX 스케일에 맞춤
         camera   = new OrthographicCamera();
-        viewport = new FitViewport(WORLD_WIDTH, WORLD_HEIGHT, camera);
-        camera.position.set(WORLD_WIDTH / 2f, WORLD_HEIGHT / 2f, 0f);
+        viewport = new FitViewport(VIEW_W, VIEW_H, camera);
+        camera.position.set(VIEW_W / 2f, VIEW_H / 2f, 0f);
         camera.update();
 
         // 월드 생성(타일맵은 GameWorld에서 로드)
-        world = new GameWorld(playerTexture, objectTexture, WORLD_WIDTH);
+        world = new GameWorld(playerTexture, objectTexture, VIEW_W);
 
         // 폰트
         scoreFont = new BitmapFont();
-        scoreFont.getData().setScale(2f);
+        scoreFont.getData().setScale(1.0f); // VIEW가 작아졌으니 글자 크기도 조정
     }
 
     @Override
@@ -143,12 +148,12 @@ public class Main extends ApplicationAdapter {
         world.draw(batch);
 
         // HUD (지금은 카메라 좌표계로 함께 스크롤됨)
-        scoreFont.draw(batch, "Score: " + world.getScore(), 20, WORLD_HEIGHT - 20);
-        scoreFont.draw(batch, "Stage: " + world.getStage(), 20, WORLD_HEIGHT - 60);
+        scoreFont.draw(batch, "Score: " + world.getScore(), camera.position.x - VIEW_W / 2f + 8f, camera.position.y + VIEW_H / 2f - 8f);
+        scoreFont.draw(batch, "Stage: " + world.getStage(), camera.position.x - VIEW_W / 2f + 8f, camera.position.y + VIEW_H / 2f - 24f);
 
         if (currentState == GameState.PAUSED) {
             scoreFont.draw(batch, "PAUSED (ESC to resume)",
-                camera.position.x - 150f, camera.position.y);
+                camera.position.x - 80f, camera.position.y);
         }
 
         batch.end();
