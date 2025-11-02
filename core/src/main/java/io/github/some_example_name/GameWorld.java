@@ -23,17 +23,35 @@ public class GameWorld {
     public void restartLevel(boolean resetPoint) {
         int lv = state.currentLevel;
         loadLevel(lv);
-        if (resetPoint) state.point = 0;  // 포인트 리셋 옵션
+        if (resetPoint) state.point = 0;  // 포인트 리셋 옵션 (R키/낙사 등에서 true로 호출)
     }
 
+    // ✅ 다음 스테이지 로직: 3스테이지 → 클리어 화면
     public void nextLevel() {
+        if (state.currentLevel >= 3) {
+            completeGame();       // 3스테이지 골에 닿으면 클리어 상태로 전환
+            return;
+        }
         int next = state.currentLevel + 1;
-        if (next > 3) next = 1;
-        state.point = 0;
+        state.point = 0;          // 스테이지 이동 시 포인트 리셋
         loadLevel(next);
     }
 
+    // ✅ 게임 클리어 처리
+    public void completeGame() {
+        state.cleared = true;     // 클리어 화면 진입
+        state.point = 0;          // 클리어 시 포인트도 0으로
+        blocks.clear();           // 화면 정리(선택)
+        // 플레이어 위치/속도 초기화
+        player.pos.set(64, 5 * Constants.TILE);
+        player.vel.set(0, 0);
+        player.grounded = true;
+        player.jumpsLeft = Constants.MAX_JUMPS;
+        player.stopDash();
+    }
+
     public void loadLevel(int lv) {
+        state.cleared = false;    // 스테이지 로드 시 클리어 상태 해제
         blocks.clear();
         state.currentLevel = MathUtils.clamp(lv, 1, 3);
         fellThisFrame = false;
@@ -113,6 +131,8 @@ public class GameWorld {
 
     // --- physics
     public void step(float dt) {
+        if (state.cleared) return;
+
         fellThisFrame = false;
 
         // gravity

@@ -17,10 +17,10 @@ public final class Constants {
     public static final int DASH_TILES = 5;
     public static final float DASH_DISTANCE = DASH_TILES * TILE; // 5칸
     public static final float DASH_SPEED = 900f;
-    public static final int DASH_COST = 1;
+    public static final int DASH_COST = 1;   // 스킬 비용 1 포인트
 
     // Points
-    public static final int BREAK_POINT = 1;
+    public static final int BREAK_POINT = 1; // 블록 파괴 시 +1
 
     // Screen
     public static final int V_WIDTH = 800;
