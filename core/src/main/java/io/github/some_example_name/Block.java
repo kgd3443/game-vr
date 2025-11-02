@@ -5,7 +5,7 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.math.Rectangle;
 
 public class Block {
-    public enum Type { SOLID, BREAKABLE, GOAL }
+    public enum Type { SOLID, BREAKABLE, GOAL } // GOAL = 하얀색, 닿으면 다음 스테이지
 
     public final int gx, gy;     // grid coords
     public final Type type;

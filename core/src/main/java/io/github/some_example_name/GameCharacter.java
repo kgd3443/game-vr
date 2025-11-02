@@ -17,8 +17,8 @@ public class GameCharacter {
 
     // Dash
     public boolean dashing = false;
-    public float dashRemaining = 0f;
-    public int dashDir = 1;
+    public float dashRemaining = 0f; // 남은 거리(px)
+    public int dashDir = 1;          // -1 or +1
 
     public GameCharacter(float x, float y) {
         pos.set(x, y);
@@ -31,8 +31,8 @@ public class GameCharacter {
     public void startDash(int direction) {
         dashing = true;
         dashDir = Math.signum(direction) == -1 ? -1 : 1;
-        dashRemaining = Constants.DASH_DISTANCE;
-        vel.x = dashDir * Constants.DASH_SPEED;
+        dashRemaining = Constants.DASH_DISTANCE;           // 정확히 5칸 진행
+        vel.x = dashDir * Constants.DASH_SPEED;            // 속도 고정
     }
 
     public void stopDash() {
