@@ -1,23 +1,25 @@
 package io.github.some_example_name;
 
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.math.Rectangle;
 
 public class Block {
     public enum Type {
-        SOLID,           // 회색: 일반 벽
-        BREAKABLE,       // 금색: 헤딩/대시로 파괴
-        GOAL,            // 흰색: 다음 스테이지 (W)
-        SLIPPERY,        // 연회색: 미끄럼 (S)
-        POISON,          // 보라(정지형): 닿으면 현재 스테이지 처음으로 (P, R도 여기로 흡수)
-        POISON_MOVING    // 보라(이동형): 좌우 왕복 (r도 여기로 흡수)
+        SOLID,            // #
+        BREAKABLE,        // B
+        GOAL,             // W
+        SLIPPERY,         // S
+        POISON,           // R (정지형 보라: 현재 스테이지 재시작)
+        POISON_MOVING     // r (이동형 보라)
     }
 
     public final int gx, gy;
     public final Type type;
 
-    // 이동 블록용
+    // 이동 블록
     public boolean moving = false;
     public float px, py;
     public float vx = 0f;
@@ -33,7 +35,7 @@ public class Block {
 
         if (type == Type.POISON_MOVING) {
             moving = true;
-            vx = Constants.PURPLE_SPEED; // 기존 상수 재사용
+            vx = Constants.PURPLE_SPEED;
             float range = Constants.PURPLE_RANGE_TILES * Constants.TILE;
             minX = px - range * 0.5f;
             maxX = px + range * 0.5f;
@@ -52,21 +54,33 @@ public class Block {
         if (px + Constants.TILE > maxX) { px = maxX - Constants.TILE; vx = -Math.abs(vx); }
     }
 
-    public void draw(ShapeRenderer sr) {
+    // 텍스처 드로우(있으면 사용)
+    public void draw(SpriteBatch batch) {
         Rectangle r = getBounds();
+        Texture tex = null;
         switch (type) {
-            case SOLID:
-                sr.setColor(Color.DARK_GRAY); break;
-            case BREAKABLE:
-                sr.setColor(Color.GOLD); break;
-            case GOAL:
-                sr.setColor(Color.WHITE); break;
-            case SLIPPERY:
-                sr.setColor(new Color(0.94f, 0.94f, 0.94f, 1f)); break; // 거의 흰색
-            case POISON:
-            case POISON_MOVING:
-                sr.setColor(new Color(0.60f, 0.25f, 0.85f, 1f)); break; // 보라
+            case SOLID:           tex = Assets.TEX_SOLID; break;
+            case BREAKABLE:       tex = Assets.TEX_BREAKABLE; break;
+            case GOAL:            tex = Assets.TEX_GOAL; break;
+            case POISON:          tex = Assets.TEX_POISON; break;
+            case POISON_MOVING:   tex = Assets.TEX_POISON_MOVING; break;
+            case SLIPPERY:        tex = Assets.TEX_SLIPPERY; break;
         }
+        if (tex != null) {
+            batch.draw(tex, r.x, r.y, r.width, r.height);
+        } else {
+            // 미끄럼 이미지가 없다면 연회색 사각형으로
+            if (type == Type.SLIPPERY) {
+                // 이 메서드에서는 ShapeRenderer가 없으므로, 이미지 없을 땐 Main에서 ShapeRenderer로 보완됨
+            }
+        }
+    }
+
+    // (선택) 텍스처가 없는 타입 보완용 — SLIPPERY 색상 사각형
+    public void drawShape(ShapeRenderer sr) {
+        if (type != Type.SLIPPERY || Assets.TEX_SLIPPERY != null) return;
+        Rectangle r = getBounds();
+        sr.setColor(new Color(0.94f, 0.94f, 0.94f, 1f));
         sr.rect(r.x, r.y, r.width, r.height);
     }
 }

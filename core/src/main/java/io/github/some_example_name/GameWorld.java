@@ -2,6 +2,7 @@ package io.github.some_example_name;
 
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.utils.Array;
 
 public class GameWorld {
@@ -73,28 +74,27 @@ public class GameWorld {
                 if (c == 'B') blocks.add(new Block(x, gy, Block.Type.BREAKABLE));
                 if (c == 'W') blocks.add(new Block(x, gy, Block.Type.GOAL));
                 if (c == 'S') blocks.add(new Block(x, gy, Block.Type.SLIPPERY));
-                // ✅ 보라/독 통합: R → POISON, r → POISON_MOVING, P → POISON
-                if (c == 'R' || c == 'P') blocks.add(new Block(x, gy, Block.Type.POISON));
-                if (c == 'r')              blocks.add(new Block(x, gy, Block.Type.POISON_MOVING));
+                if (c == 'R') blocks.add(new Block(x, gy, Block.Type.POISON));           // 보라(정지)
+                if (c == 'r') blocks.add(new Block(x, gy, Block.Type.POISON_MOVING));    // 보라(이동)
             }
         }
 
-        // 기본 스폰
+        // 스폰
         player.pos.set(64, 5 * Constants.TILE);
         player.vel.set(0, 0);
         player.grounded = false;
         player.jumpsLeft = Constants.MAX_JUMPS;
         player.stopDash();
 
-        // 트리거와 겹치지 않게 스폰 보정
         ensureSafeSpawn();
     }
 
+    // ===== 맵(사용자 제공 원본) =====
     private String[] makeLevel1() {
         return new String[] {
-            "...............................................................................................#",
-            "...............................................................................................#",
-            "...............................................................................................#.",
+            ".....................................B.........................................................#",
+            ".....................................B.........................................................#",
+            ".....................................B.........................................................#.",
             "...............B.....................B..........................................#..............#.",
             ".....................................B............................BB........#..................#",
             ".....................................B............................................#............#.",
@@ -114,26 +114,27 @@ public class GameWorld {
             ".........................RRR....RRR......RRR...RRRRRRR.RRRRRRRRR........B...RRRRRR##RRRRRR..RRR#",
             ".................RRR.....RRR....RRRRRRRR.RRR..................RRRR.........RRRRRRRRRRRRRRR..RRR#",
             "B.....#R......R#########################################..................RRRRRRRRRRRRRRRR..RRR#",
-            "......RR......RRRRRRRRRRRRRRRRRRRRRRRRRRRRRR...........########.....#####RRRBBBBBBBBBBBBBB..W..#",
+            "......RR......RRRRRRRRRRRRRRRRRRRRRRRRRRRRRR...........########.....######RRRRRRRRRRRRRRRR..W..#",
             "......RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR##................RRR##.....########################",
             "######RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR................................................"
-
         };
     }
+
     private String[] makeLevel3() {
         return new String[] {
             "...............................................................................................#",
             "...............................................................................................#",
             "....RRRRRRRRRRR................................................................................#",
-            "RRRRR.........RRRRRRRRRRRRR...............r.....B.RRRRR............r..........R................#",
-            "..........................R................................RR.......r.........R................#",
-            "..........................R.................RR.SSS#........r.........r.....R..R................#",
-            "B........R....r.................B...........RR...........SSSSSS.......r....R..R...r.....R......#",
-            "........RRR...BSSSSSS.................r.....RR.............................R..R.......r......W.#",
-            ".......RRRRR......................RRRRRRR###..........................SSSSSS............SSSSSSS#",
-            "SSSSSSSSSSSSSSSSSSSSSSSS........SS.........................................SSSSSSSSSSSSSS......."
+            "RRRRR.........RRRRR.......................r.....B.RRRRR............r..........R................#",
+            "...........................................................RR.......r.........R................#",
+            "...........................r......r.........RR.SSSS........r.........r.....R..R................#",
+            "B........R....r....B........r...B...........RR...........SSSSSS.......r....R..R...r.....R......#",
+            "........RRR........r.......r..........r.....RR.............................R..R.......r......W.#",
+            ".......RRRRR................r.....RRRRRRR###..........................SSSSSS............SSSSSSS#",
+            "SSSSSSSSSSSSSSSSSSSSSSSS.......SSS.........................................SSSSSSSSSSSSSS......."
         };
     }
+    // ============================
 
     public void step(float dt) {
         if (state.cleared) return;
@@ -172,7 +173,13 @@ public class GameWorld {
         if (player.pos.y < -128f) fellThisFrame = true;
     }
 
-    // X 충돌: 트리거(POISON/GOAL)는 통과
+    // 텍스처 월드 드로우 (Main에서 batch로 호출)
+    public void draw(SpriteBatch batch) {
+        for (int i = 0; i < blocks.size; i++) {
+            blocks.get(i).draw(batch);
+        }
+    }
+
     private float resolveX(Rectangle r) {
         float before = player.pos.x;
         for (int i = blocks.size-1; i >= 0; i--) {
@@ -180,7 +187,7 @@ public class GameWorld {
             Rectangle br = b.getBounds();
             if (!r.overlaps(br)) continue;
 
-            if (isTriggerBlock(b.type)) continue; // 트리거 통과
+            if (isTriggerBlock(b.type)) continue;
 
             if (player.dashing && b.type == Block.Type.BREAKABLE) {
                 blocks.removeIndex(i);
@@ -195,14 +202,13 @@ public class GameWorld {
         return r.x - before;
     }
 
-    // Y 충돌: 트리거(POISON/GOAL)는 통과
     private void resolveY(Rectangle r, boolean movingUp) {
         for (int i = blocks.size-1; i >= 0; i--) {
             Block b = blocks.get(i);
             Rectangle br = b.getBounds();
             if (!r.overlaps(br)) continue;
 
-            if (isTriggerBlock(b.type)) continue; // 트리거 통과
+            if (isTriggerBlock(b.type)) continue;
 
             if (movingUp && r.y + r.height > br.y && player.vel.y > 0) {
                 if (b.type == Block.Type.BREAKABLE) {
@@ -215,7 +221,6 @@ public class GameWorld {
                 if (player.vel.y < 0) {
                     r.y = br.y + br.height + 0.01f;
                     player.vel.y = 0;
-
                     if (b.type == Block.Type.SLIPPERY) onSlippery = true;
                     if (b.moving) r.x += b.vx * Constants.MOVING_CARRY_RATIO;
                 } else if (player.vel.y > 0) {
@@ -229,13 +234,13 @@ public class GameWorld {
     private boolean isStandingOnBlock(Rectangle r) {
         Rectangle below = new Rectangle(r.x, r.y - 2, r.width, r.height);
         for (Block b : blocks) {
-            if (isTriggerBlock(b.type)) continue; // 트리거는 바닥 아님
+            if (isTriggerBlock(b.type)) continue;
             if (below.overlaps(b.getBounds())) return true;
         }
         return false;
     }
 
-    // ✅ 트리거: 우선순위 — (POISON 계열) → GOAL
+    // 트리거: 우선순위 — (POISON 계열) → GOAL
     private void checkTriggers(Rectangle r) {
         boolean hitPoison = false;
         boolean hitGoal   = false;
@@ -248,11 +253,10 @@ public class GameWorld {
             else if (b.type == Block.Type.GOAL) hitGoal = true;
         }
 
-        if (hitPoison) { restartLevel(true); return; } // R키와 동일
+        if (hitPoison) { restartLevel(true); return; }
         if (hitGoal)   { nextLevel(); return; }
     }
 
-    // ===== 유틸 =====
     private boolean isTriggerBlock(Block.Type t) {
         return t == Block.Type.GOAL || t == Block.Type.POISON || t == Block.Type.POISON_MOVING;
     }
