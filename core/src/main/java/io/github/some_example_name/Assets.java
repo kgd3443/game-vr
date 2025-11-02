@@ -8,9 +8,9 @@ public class Assets {
     public static Texture TEX_SOLID;
     public static Texture TEX_BREAKABLE;
     public static Texture TEX_GOAL;
-    public static Texture TEX_POISON;          // R
-    public static Texture TEX_POISON_MOVING;   // r
-    public static Texture TEX_SLIPPERY;        // S (없으면 null)
+    public static Texture TEX_POISON;
+    public static Texture TEX_POISON_MOVING;
+    public static Texture TEX_SLIPPERY;
 
     public static void load() {
         TEX_SOLID         = new Texture(Gdx.files.internal("solid.png"));
@@ -19,14 +19,12 @@ public class Assets {
         TEX_POISON        = new Texture(Gdx.files.internal("poison.png"));
         TEX_POISON_MOVING = new Texture(Gdx.files.internal("poison_moving.png"));
 
-        // 선택: 미끄럼 이미지가 있으면 사용
         if (Gdx.files.internal("slippery.png").exists()) {
             TEX_SLIPPERY = new Texture(Gdx.files.internal("slippery.png"));
         } else {
             TEX_SLIPPERY = null;
         }
 
-        // 픽셀아트 선명도 유지
         Texture[] arr = {TEX_SOLID, TEX_BREAKABLE, TEX_GOAL, TEX_POISON, TEX_POISON_MOVING, TEX_SLIPPERY};
         for (Texture t : arr) {
             if (t != null) t.setFilter(TextureFilter.Nearest, TextureFilter.Nearest);

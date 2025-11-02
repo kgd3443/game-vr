@@ -12,8 +12,8 @@ public class Block {
         BREAKABLE,        // B
         GOAL,             // W
         SLIPPERY,         // S
-        POISON,           // R (정지형 보라: 현재 스테이지 재시작)
-        POISON_MOVING     // r (이동형 보라)
+        POISON,           // R (정지형 독)
+        POISON_MOVING     // r (이동형 독)
     }
 
     public final int gx, gy;
@@ -69,14 +69,11 @@ public class Block {
         if (tex != null) {
             batch.draw(tex, r.x, r.y, r.width, r.height);
         } else {
-            // 미끄럼 이미지가 없다면 연회색 사각형으로
             if (type == Type.SLIPPERY) {
-                // 이 메서드에서는 ShapeRenderer가 없으므로, 이미지 없을 땐 Main에서 ShapeRenderer로 보완됨
             }
         }
     }
 
-    // (선택) 텍스처가 없는 타입 보완용 — SLIPPERY 색상 사각형
     public void drawShape(ShapeRenderer sr) {
         if (type != Type.SLIPPERY || Assets.TEX_SLIPPERY != null) return;
         Rectangle r = getBounds();

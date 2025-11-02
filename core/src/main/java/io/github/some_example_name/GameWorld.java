@@ -74,8 +74,8 @@ public class GameWorld {
                 if (c == 'B') blocks.add(new Block(x, gy, Block.Type.BREAKABLE));
                 if (c == 'W') blocks.add(new Block(x, gy, Block.Type.GOAL));
                 if (c == 'S') blocks.add(new Block(x, gy, Block.Type.SLIPPERY));
-                if (c == 'R') blocks.add(new Block(x, gy, Block.Type.POISON));           // 보라(정지)
-                if (c == 'r') blocks.add(new Block(x, gy, Block.Type.POISON_MOVING));    // 보라(이동)
+                if (c == 'R') blocks.add(new Block(x, gy, Block.Type.POISON));
+                if (c == 'r') blocks.add(new Block(x, gy, Block.Type.POISON_MOVING));
             }
         }
 
