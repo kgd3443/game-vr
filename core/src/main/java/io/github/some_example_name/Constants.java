@@ -29,4 +29,14 @@ public final class Constants {
     // Shake (on falling into pit)
     public static final float SHAKE_DURATION = 0.5f; // seconds
     public static final float SHAKE_AMPLITUDE = 12f; // pixels
+    // Moving purple (왕복)
+    public static final float PURPLE_SPEED = 80f;              // px/s
+    public static final int   PURPLE_RANGE_TILES = 6;          // 왕복 범위(타일)
+
+    // Slippery
+    public static final float SLIPPERY_DECAY = 0.985f;         // 미끄럼 감쇠(1에 가까울수록 오래 미끄러짐)
+
+    // 이동 블록 위 운반 비율
+    public static final float MOVING_CARRY_RATIO = 0.06f;      // b.vx 일부를 플레이어에 전달
+
 }

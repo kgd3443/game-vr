@@ -29,7 +29,7 @@ public class Main extends ApplicationAdapter {
     private ShapeRenderer sr;
     private SpriteBatch batch;
     private BitmapFont font;
-    private GlyphLayout layout; // 중앙정렬용
+    private GlyphLayout layout; // 중앙정렬/측정용
 
     private GameWorld world;
 
@@ -60,7 +60,7 @@ public class Main extends ApplicationAdapter {
     }
 
     private void handleInput(float dt) {
-        // 클리어 화면: 엔터로 1스테이지부터 재시작
+        // --- 클리어 화면: 엔터로 1스테이지부터 재시작 ---
         if (world.state.cleared) {
             if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
                 world.loadLevel(1);
@@ -80,12 +80,28 @@ public class Main extends ApplicationAdapter {
         }
         if (world.state.paused || shaking) return; // 흔들림/일시정지 동안 이동 입력 차단
 
-        // Move (no input while dashing)
+        // --- Move (no input while dashing) + 미끄럼 처리 ---
         float ax = 0f;
+        boolean left  = Gdx.input.isKeyPressed(Input.Keys.LEFT)  || Gdx.input.isKeyPressed(Input.Keys.A);
+        boolean right = Gdx.input.isKeyPressed(Input.Keys.RIGHT) || Gdx.input.isKeyPressed(Input.Keys.D);
+
         if (!world.player.dashing) {
-            if (Gdx.input.isKeyPressed(Input.Keys.LEFT) || Gdx.input.isKeyPressed(Input.Keys.A)) ax -= Constants.MOVE_SPEED;
-            if (Gdx.input.isKeyPressed(Input.Keys.RIGHT) || Gdx.input.isKeyPressed(Input.Keys.D)) ax += Constants.MOVE_SPEED;
-            world.player.vel.x = ax;
+            if (left)  ax -= Constants.MOVE_SPEED;
+            if (right) ax += Constants.MOVE_SPEED;
+
+            if (ax != 0f) {
+                // 입력이 있으면 즉시 목표 속도로
+                world.player.vel.x = ax;
+            } else {
+                // 입력이 없으면: 미끄럼 바닥에서만 서서히 감소, 아니면 즉시 정지
+                if (world.onSlippery && world.player.grounded) {
+                    world.player.vel.x *= Constants.SLIPPERY_DECAY; // 예: 0.985f
+                    // 아주 작아지면 0으로 스냅
+                    if (Math.abs(world.player.vel.x) < 1f) world.player.vel.x = 0f;
+                } else {
+                    world.player.vel.x = 0f;
+                }
+            }
         }
 
         // Jump (double jump)
@@ -102,14 +118,14 @@ public class Main extends ApplicationAdapter {
             world.state.point -= Constants.DASH_COST;
 
             int dir = 1;
-            if (Gdx.input.isKeyPressed(Input.Keys.LEFT) || Gdx.input.isKeyPressed(Input.Keys.A)) dir = -1;
-            else if (Gdx.input.isKeyPressed(Input.Keys.RIGHT) || Gdx.input.isKeyPressed(Input.Keys.D)) dir = 1;
+            if (left) dir = -1;
+            else if (right) dir = 1;
             else if (world.player.vel.x < 0) dir = -1; // 입력 없으면 마지막 진행방향 유지
 
             world.player.startDash(dir);
         }
 
-        // Dev hotkeys
+        // Dev hotkeys (테스트용)
         if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_1)) world.loadLevel(1);
         if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_2)) world.loadLevel(2);
         if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_3)) world.loadLevel(3);
@@ -225,7 +241,7 @@ public class Main extends ApplicationAdapter {
             Gdx.gl.glDisable(GL20.GL_BLEND);
             batch.begin();
 
-            // 3) 텍스트(항상 최상단, 중앙정렬)
+            // 3) 텍스트(항상 최상단, 중앙정렬 + 얇은 그림자)
             drawCentered(line1, titleY);
             drawCentered(line2, titleY - gap);
         } else {
@@ -233,7 +249,7 @@ public class Main extends ApplicationAdapter {
                 (world.state.paused ? "[PAUSED] " : "") +
                     "Point: " + world.state.point +
                     "   Level: " + world.state.currentLevel +
-                    "   [Z]Jump x2  [X]Dash(cost 1, 5 tiles)  [R]Restart  [ESC/P]Pause  [1~3]Level",
+                    "   [Z]Jump x2  [X]Dash(cost : 1point)  [R]Restart  [ESC/P]Pause  [1~3]Level",
                 cam.position.x - 380, cam.viewportHeight - 12);
             if (shaking) {
                 font.draw(batch, "Fell! Restarting...", cam.position.x - 80, cam.viewportHeight - 32);
