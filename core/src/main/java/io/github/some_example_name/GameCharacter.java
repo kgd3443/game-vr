@@ -31,8 +31,8 @@ public class GameCharacter {
     public void startDash(int direction) {
         dashing = true;
         dashDir = Math.signum(direction) == -1 ? -1 : 1;
-        dashRemaining = Constants.DASH_DISTANCE;           // 정확히 5칸 진행
-        vel.x = dashDir * Constants.DASH_SPEED;            // 속도 고정
+        dashRemaining = Constants.DASH_DISTANCE;
+        vel.x = dashDir * Constants.DASH_SPEED;
     }
 
     public void stopDash() {

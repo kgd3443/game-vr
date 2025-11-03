@@ -16,6 +16,11 @@ public class GameWorld {
     public boolean fellThisFrame = false;
     public boolean onSlippery = false;
 
+    private static final float WALL_SLIDE_MAX_FALL_SPEED = -120f;
+
+    // 프레임 동안 옆면에 닿았는지 표시
+    private boolean touchingWallThisFrame = false;
+
     public GameWorld() {
         player = new GameCharacter(64, 96);
         loadLevel(1);
@@ -74,8 +79,8 @@ public class GameWorld {
                 if (c == 'B') blocks.add(new Block(x, gy, Block.Type.BREAKABLE));
                 if (c == 'W') blocks.add(new Block(x, gy, Block.Type.GOAL));
                 if (c == 'S') blocks.add(new Block(x, gy, Block.Type.SLIPPERY));
-                if (c == 'R') blocks.add(new Block(x, gy, Block.Type.POISON));
-                if (c == 'r') blocks.add(new Block(x, gy, Block.Type.POISON_MOVING));
+                if (c == 'R') blocks.add(new Block(x, gy, Block.Type.POISON));           // 보라(정지)
+                if (c == 'r') blocks.add(new Block(x, gy, Block.Type.POISON_MOVING));    // 보라(이동)
             }
         }
 
@@ -89,19 +94,19 @@ public class GameWorld {
         ensureSafeSpawn();
     }
 
-    // ===== 맵(사용자 제공 원본) =====
+    // ===== 사용자가 제공한 맵 =====
     private String[] makeLevel1() {
         return new String[] {
-            ".....................................B.........................................................#",
-            ".....................................B.........................................................#",
-            ".....................................B.........................................................#.",
-            "...............B.....................B..........................................#..............#.",
-            ".....................................B............................BB........#..................#",
-            ".....................................B............................................#............#.",
-            "...............B.....#...............B........BB...............................................#",
-            "....................##...............B.........................#####.....#...........#......W..#",
-            "...................###...............B.........................#####...........................#",
-            "#########..###########...............###########...............#####...................#########"
+            ".................................................................................................",
+            "######################################...........................................................",
+            ".....#..................#...R.....R..#...........................................................",
+            ".....#..................#..R.R..RRRRR#.................................................#.......#.",
+            ".....#...............#..#.RRRRR...R..#............................B....................#.......#",
+            ".....#########.......#..#R.....R..R..#.................................................#.......#.",
+            ".............#......##..##############.........B.......................................#.......#",
+            "....B...............##.............B.#.........................#####.....#......#......#....W..#",
+            "...................###...............B.........................#####...................#.......#",
+            "#####.........########...#######################...............#####...................#########"
         };
     }
 
@@ -114,7 +119,7 @@ public class GameWorld {
             ".........................RRR....RRR......RRR...RRRRRRR.RRRRRRRRR........B...RRRRRR##RRRRRR..RRR#",
             ".................RRR.....RRR....RRRRRRRR.RRR..................RRRR.........RRRRRRRRRRRRRRR..RRR#",
             "B.....#R......R#########################################..................RRRRRRRRRRRRRRRR..RRR#",
-            "......RR......RRRRRRRRRRRRRRRRRRRRRRRRRRRRRR...........########.....######RRRRRRRRRRRRRRRR..W..#",
+            "......RR......RRRRRRRRRRRRRRRRRRRRRRRRRRRRRR...........########.....#####RRRBBBBBBBBBBBBBB..W..#",
             "......RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR##................RRR##.....########################",
             "######RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR................................................"
         };
@@ -134,25 +139,29 @@ public class GameWorld {
             "SSSSSSSSSSSSSSSSSSSSSSSS.......SSS.........................................SSSSSSSSSSSSSS......."
         };
     }
-    // ============================
+    // ==========================
 
     public void step(float dt) {
         if (state.cleared) return;
 
         fellThisFrame = false;
         onSlippery = false;
+        touchingWallThisFrame = false;
 
         for (int i = 0; i < blocks.size; i++) {
             Block b = blocks.get(i);
             if (b.moving) b.update(dt);
         }
 
+        // 중력
         player.vel.y += Constants.GRAVITY * dt;
 
+        // 예측
         Rectangle pb = player.getBounds();
         float newX = pb.x + player.vel.x * dt;
         float newY = pb.y + player.vel.y * dt;
 
+        // X 충돌(옆면 접촉 판정 포함)
         Rectangle nx = new Rectangle(newX, pb.y, pb.width, pb.height);
         float movedX = resolveX(nx);
         if (player.dashing) {
@@ -161,19 +170,27 @@ public class GameWorld {
             else player.vel.x = player.dashDir * Constants.DASH_SPEED;
         }
 
+        // Y 충돌
         Rectangle ny = new Rectangle(nx.x, newY, nx.width, nx.height);
         resolveY(ny, player.vel.y > 0);
 
         player.pos.set(ny.x, ny.y);
         player.grounded = isStandingOnBlock(player.getBounds());
-        if (player.grounded) player.jumpsLeft = Constants.MAX_JUMPS;
+        if (player.grounded) {
+            player.jumpsLeft = Constants.MAX_JUMPS;
+        }
+
+        if (!player.grounded && touchingWallThisFrame && player.vel.y < WALL_SLIDE_MAX_FALL_SPEED) {
+            player.vel.y = WALL_SLIDE_MAX_FALL_SPEED;
+        }
 
         checkTriggers(player.getBounds());
 
-        if (player.pos.y < -128f) fellThisFrame = true;
+        if (player.pos.y < -128f) {
+            fellThisFrame = true;
+        }
     }
 
-    // 텍스처 월드 드로우 (Main에서 batch로 호출)
     public void draw(SpriteBatch batch) {
         for (int i = 0; i < blocks.size; i++) {
             blocks.get(i).draw(batch);
@@ -189,6 +206,7 @@ public class GameWorld {
 
             if (isTriggerBlock(b.type)) continue;
 
+            // 대시 중 파괴
             if (player.dashing && b.type == Block.Type.BREAKABLE) {
                 blocks.removeIndex(i);
                 state.point += Constants.BREAK_POINT;
@@ -198,10 +216,12 @@ public class GameWorld {
             if (player.vel.x > 0) r.x = br.x - r.width - 0.01f;
             else if (player.vel.x < 0) r.x = br.x + br.width + 0.01f;
             player.vel.x = 0;
+            touchingWallThisFrame = true;
         }
         return r.x - before;
     }
 
+    // Y 충돌: 트리거(POISON/GOAL)는 통과
     private void resolveY(Rectangle r, boolean movingUp) {
         for (int i = blocks.size-1; i >= 0; i--) {
             Block b = blocks.get(i);
@@ -240,7 +260,6 @@ public class GameWorld {
         return false;
     }
 
-    // 트리거: 우선순위 — (POISON 계열) → GOAL
     private void checkTriggers(Rectangle r) {
         boolean hitPoison = false;
         boolean hitGoal   = false;
@@ -253,8 +272,14 @@ public class GameWorld {
             else if (b.type == Block.Type.GOAL) hitGoal = true;
         }
 
-        if (hitPoison) { restartLevel(true); return; }
-        if (hitGoal)   { nextLevel(); return; }
+        if (hitPoison) {
+            // 흔들림 → Main이 타이머 종료 시 restartLevel(true) 호출
+            fellThisFrame = true;
+            return;
+        }
+        if (hitGoal) {
+            nextLevel();
+        }
     }
 
     private boolean isTriggerBlock(Block.Type t) {

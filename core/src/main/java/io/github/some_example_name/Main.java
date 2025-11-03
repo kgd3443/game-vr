@@ -46,13 +46,10 @@ public class Main extends ApplicationAdapter {
         cam.setToOrtho(false, Constants.V_WIDTH, Constants.V_HEIGHT);
         sr = new ShapeRenderer();
         batch = new SpriteBatch();
-        font = new BitmapFont();   // 영어 메시지
+        font = new BitmapFont();
         layout = new GlyphLayout();
 
-        // 에셋 로드
         Assets.load();
-
-        // 클리어 GIF
         loadClearGif("clear.gif");
 
         world = new GameWorld();
@@ -94,7 +91,6 @@ public class Main extends ApplicationAdapter {
             }
         }
 
-        // 점프(2단)
         if (Gdx.input.isKeyJustPressed(Input.Keys.Z) || Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
             if (world.player.jumpsLeft > 0) {
                 world.player.vel.y = Constants.JUMP_VELOCITY;
@@ -102,15 +98,14 @@ public class Main extends ApplicationAdapter {
             }
         }
 
-        // 대시(5타일, cost=1)
-        if ((Gdx.input.isKeyJustPressed(Input.Keys.X) || Gdx.input.isKeyJustPressed(Input.Keys.SHIFT_LEFT))
+        if ((Gdx.input.isKeyJustPressed(Input.Keys.X))
             && !world.player.dashing && world.state.point >= Constants.DASH_COST) {
             world.state.point -= Constants.DASH_COST;
             int dir = right ? 1 : (left ? -1 : (world.player.vel.x < 0 ? -1 : 1));
             world.player.startDash(dir);
         }
 
-        // 테스트 단축키
+        //테스트용 핫키
         if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_1)) world.loadLevel(1);
         if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_2)) world.loadLevel(2);
         if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_3)) world.loadLevel(3);
@@ -119,8 +114,6 @@ public class Main extends ApplicationAdapter {
     @Override
     public void render() {
         float dt = Gdx.graphics.getDeltaTime();
-
-        // 낙사 흔들림 시작
         if (!world.state.cleared && world.fellThisFrame && !shaking) {
             shaking = true;
             shakeTimer = Constants.SHAKE_DURATION;
@@ -159,13 +152,13 @@ public class Main extends ApplicationAdapter {
         Gdx.gl.glClearColor(0.1f, 0.12f, 0.15f, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
-        // ===== 1) 월드 텍스처 먼저 그리기 =====
+        //월드 텍스처
         batch.setProjectionMatrix(cam.combined);
         batch.begin();
         if (!world.state.cleared) {
             world.draw(batch); // 타일 텍스처
         } else {
-            // 클리어 화면: GIF 먼저
+            // 클리어 화면
             TextureRegion frame = getGifFrame(clearGifTimer);
             if (frame != null) {
                 float scale = 1f;
@@ -178,11 +171,10 @@ public class Main extends ApplicationAdapter {
         }
         batch.end();
 
-        // ===== 2) 플레이어/보완용 사각형(미끄럼 이미지 없을 때) =====
+        //테스트용 캐릭터
         sr.setProjectionMatrix(cam.combined);
         sr.begin(ShapeRenderer.ShapeType.Filled);
         if (!world.state.cleared) {
-            // 미끄럼 이미지 없을 때 보완 렌더
             for (int i = 0; i < world.blocks.size; i++) {
                 world.blocks.get(i).drawShape(sr);
             }
@@ -192,7 +184,7 @@ public class Main extends ApplicationAdapter {
         }
         sr.end();
 
-        // ===== 3) UI + 클리어 텍스트 패널 =====
+        //UI + 클리어
         batch.setProjectionMatrix(cam.combined);
         batch.begin();
         if (world.state.cleared) {
@@ -231,7 +223,7 @@ public class Main extends ApplicationAdapter {
                     "   [Z]double Jump! [X]Dash(cost : 1 point)  [R]Restart  [ESC/P]Pause",
                 cam.position.x - 380, cam.viewportHeight - 12);
             if (shaking) {
-                font.draw(batch, "Fell! Restarting...", cam.position.x - 80, cam.viewportHeight - 32);
+                font.draw(batch, "YOU DIE!", cam.position.x - 80, cam.viewportHeight - 32);
             }
         }
         batch.end();
@@ -274,7 +266,7 @@ public class Main extends ApplicationAdapter {
         sr.rect(midX - 2f, crownY + crownH + 2f, 4f, 6f);
     }
 
-    // ===== GIF 유틸 =====
+    //GIF 유틸
     private void loadClearGif(String internalPath) {
         try {
             InputStream in = Gdx.files.internal(internalPath).read();
